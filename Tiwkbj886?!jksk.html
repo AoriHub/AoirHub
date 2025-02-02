@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ร้านค้า | ผู้ใช้ทั่วไป</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #222; color: white; margin: 0; padding: 20px; }
+        .header { text-align: right; padding: 10px; background: #333; }
+        .container { max-width: 600px; margin: auto; }
+        .product { background: #333; padding: 10px; margin: 10px 0; border-radius: 10px; }
+        .product img { width: 100%; border-radius: 10px; }
+        .product button { background: green; color: white; padding: 10px; width: 100%; border: none; cursor: pointer; }
+        .history { background: #444; padding: 10px; border-radius: 10px; margin-top: 20px; }
+        .stock { color: yellow; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        👤 <span id="username">Guest</span> | 💰 <span id="userBalance">0</span> บาท
+    </div>
+
+    <div class="container">
+        <h2>ร้านค้า</h2>
+        <button onclick="addMoney(50)">เติมเงิน 50 บาท</button>
+
+        <div id="productList"></div>
+
+        <div class="history">
+            <h3>ประวัติการซื้อ</h3>
+            <div id="purchaseHistory"></div>
+        </div>
+
+        <div class="history">
+            <h3>📢 ข้อความจากแอดมิน</h3>
+            <p id="adminMessageDisplay">ไม่มีข้อความ</p>
+        </div>
+    </div>
+
+    <script>
+        let username = localStorage.getItem("username") || "Guest";
+        let userBalance = localStorage.getItem("userBalance") || 100;
+        document.getElementById("username").innerText = username;
+        document.getElementById("userBalance").innerText = userBalance;
+
+        let products = JSON.parse(localStorage.getItem("adminProducts")) || [
+            { id: 1, name: "ผล Mammoth", price: 50, stock: 5, img: "https://via.placeholder.com/300" }
+        ];
+
+        function loadProducts() {
+            let productList = document.getElementById("productList");
+            productList.innerHTML = "";
+            products.forEach(product => {
+                productList.innerHTML += `
+                    <div class="product">
+                        <img src="${product.img}" alt="${product.name}">
+                        <h3>${product.name}</h3>
+                        <p>ราคา: ${product.price} บาท</p>
+                        <p class="stock">เหลือสินค้า: <span id="stock-${product.id}">${product.stock}</span> ชิ้น</p>
+                        <button id="buy-${product.id}" onclick="buyProduct(${product.id})" ${product.stock <= 0 ? "disabled" : ""}>${product.stock > 0 ? "ซื้อเลย" : "สินค้าหมด"}</button>
+                    </div>
+                `;
+            });
+        }
+
+        function buyProduct(productId) {
+            let product = products.find(p => p.id === productId);
+            if (userBalance >= product.price && product.stock > 0) {
+                userBalance -= product.price;
+                product.stock -= 1;
+                localStorage.setItem("userBalance", userBalance);
+                document.getElementById("userBalance").innerText = userBalance;
+
+                let orders = JSON.parse(localStorage.getItem("orders")) || [];
+                let date = new Date().toLocaleString();
+                orders.push({ ...product, date });
+                localStorage.setItem("orders", JSON.stringify(orders));
+
+                updatePurchaseHistory();
+                alert("ซื้อสำเร็จ!");
+
+                localStorage.setItem("adminProducts", JSON.stringify(products));
+                document.getElementById(`stock-${product.id}`).innerText = product.stock;
+                if (product.stock <= 0) {
+                    document.getElementById(`buy-${product.id}`).innerText = "สินค้าหมด";
+                    document.getElementById(`buy-${product.id}`).disabled = true;
+                }
+
+                let adminNotifications = JSON.parse(localStorage.getItem("adminNotifications")) || [];
+                adminNotifications.push(`${username} ซื้อ ${product.name} เมื่อ ${date} (เหลือสินค้า ${product.stock} ชิ้น)`);
+                localStorage.setItem("adminNotifications", JSON.stringify(adminNotifications));
+            } else {
+                alert("ยอดเงินไม่เพียงพอ หรือสินค้าหมด!");
+            }
+        }
+
+        function updatePurchaseHistory() {
+            let historyDiv = document.getElementById("purchaseHistory");
+            let orders = JSON.parse(localStorage.getItem("orders")) || [];
+            historyDiv.innerHTML = orders.map(order => `<p>🛒 ${order.name} - ${order.date}</p>`).join("");
+        }
+
+        function addMoney(amount) {
+            userBalance = parseInt(userBalance) + amount;
+            localStorage.setItem("userBalance", userBalance);
+            document.getElementById("userBalance").innerText = userBalance;
+        }
+
+        function loadAdminMessage() {
+            let message = localStorage.getItem("adminMessage") || "ไม่มีข้อความ";
+            document.getElementById("adminMessageDisplay").innerText = message;
+        }
+
+        loadProducts();
+        updatePurchaseHistory();
+        loadAdminMessage();
+    </script>
+</body>
+</html>
